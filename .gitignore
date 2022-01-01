@@ -3,4 +3,7 @@ build
 release
 dist
 *.log
-*-lock.json
+
+bin/cli.js
+bin/cli.js.LICENSE.txt
+yarn.lock
