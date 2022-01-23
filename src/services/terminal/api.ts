@@ -1,79 +1,62 @@
 import path from 'path';
 import fs from 'fs';
-import { IThemeType, ThemeType } from '../../../@types/theme';
+// import axios from 'axios';
+
+import { ThemeType } from '../../../@types/theme';
 import { ITerminalOptions } from 'xterm';
+import { useEffect, useState } from 'react';
+import { IoMdClose } from 'react-icons/io';
+import { toast } from 'react-toastify';
 
 const { app } = window.require('@electron/remote');
 
 function useCurrentTheme(themeName: string) {
-    const themesFolder = path.join(app.getPath('appData'), 'photon', 'Themes');
+    const themesDir = path.join(app.getPath('appData'), 'photon', 'Themes');
+    const [theme, setTheme] = useState<ITerminalOptions>();
+    const currentThemePath = path.join(themesDir, themeName);
 
-    const themeFolder = fs.readdirSync(themesFolder);
-
-    if (themeName === 'default-theme') {
-        return loadDefaultTheme();
-    }
-
-    for (let i = 0; i < themeFolder.length; i++) {
-        const theme = themeFolder[i];
-
-        const themeFiles = fs.readdirSync(path.join(themesFolder, theme));
-
-        for (let o = 0; o < themeFiles.length; o++) {
-            const themeFile = themeFiles[o];
-
-            if (themeFile === 'theme.json') {
-                const themeJSON = JSON.parse(
-                    fs
-                        .readFileSync(
-                            path.join(themesFolder, theme, 'theme.json')
-                        )
-                        .toString()
-                ) as ThemeType;
-
-                if (themeName === themeJSON.name) {
-                    return loadTheme({
-                        ...themeJSON,
-                        path: path.join(themesFolder, theme),
-                    });
-                }
-            }
+    useEffect(() => {
+        if (!fs.existsSync(currentThemePath)) {
+            const defaultTheme = loadDefaultTheme();
+            setTheme(defaultTheme);
+            toast(`Cannot find ${themeName} theme. Loading default theme`, {
+                progressStyle: {
+                    backgroundColor: defaultTheme?.theme?.cursor,
+                },
+                theme: 'dark',
+                icon: IoMdClose,
+            });
+            return;
         }
-    }
+        setTheme(loadTheme(path.join(themesDir, themeName)));
+    }, [themeName]);
 
-    return loadDefaultTheme();
+    return theme;
 }
 
 function loadDefaultTheme() {
-    const themesFolder = path.join(app.getPath('appData'), 'photon', 'Themes');
-    const defaultThemePath = path.join(
-        themesFolder,
-        'default-theme',
-        'theme.json'
-    );
-
-    const defaultTheme = JSON.parse(
-        fs.readFileSync(defaultThemePath).toString()
-    );
-
-    const theme = defaultTheme as ThemeType;
-    return loadTheme({
-        ...theme,
-        path: path.join(defaultThemePath, '..'),
-    });
+    const themesDir = path.join(app.getPath('appData'), 'photon', 'Themes');
+    return loadTheme(path.join(themesDir, 'default-theme'));
 }
 
-function loadTheme(theme: IThemeType) {
+function loadTheme(themePath: string) {
+    const themeJSONPath = path.join(themePath, 'theme.json');
+
+    const theme = JSON.parse(
+        fs.readFileSync(themeJSONPath).toString()
+    ) as ThemeType;
+
     if (theme.css) {
         const cssPath =
             path.resolve(theme.css) === path.normalize(theme.css) // is absolute or relative path
                 ? theme.css
-                : path.join(theme.path, theme.css);
+                : path.join(themePath, theme.css);
 
         const cssFile = fs.readFileSync(cssPath).toString();
 
         const head = document.getElementsByTagName('head')[0];
         const style = document.createElement('style');
+        style.id = `themeStyle-${theme.name}-${theme.version}`;
         style.innerHTML = cssFile;
 
         head.appendChild(style);

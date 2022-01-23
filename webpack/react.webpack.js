@@ -2,7 +2,7 @@ const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
-    name: 'photon-app',
+    name: 'photon',
     entry: './src/index.tsx',
     resolve: {
         extensions: ['.tsx', '.ts', '.js'],
@@ -32,12 +32,13 @@ module.exports = {
     devServer: {
         historyApiFallback: true,
         compress: true,
-        hot: true,
+        hot: false,
         port: 3000,
     },
     output: {
         path: path.resolve(__dirname, '..', 'dist', 'renderer'),
         filename: 'js/[name].js',
+        crossOriginLoading: 'anonymous',
     },
     plugins: [
         new HtmlWebpackPlugin({

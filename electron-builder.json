@@ -13,7 +13,8 @@
             "include": "lib/win/installer.nsh",
             "perMachine": false,
             "allowToChangeInstallationDirectory": true,
-            "oneClick": false
+            "oneClick": false,
+            "allowElevation": true
         },
         "win": {
             "target": [
@@ -51,9 +52,11 @@
                         "x64"
                     ]
                 }
-            ]
+            ],
+            "icon": "./assets/icon.icns"
         },
         "mac": {
+            "icon": "./assets/icon.icns",
             "target": {
                 "target": "default",
                 "arch": [
@@ -111,7 +114,11 @@
             "buildResources": "./assets"
         },
         "deb": {
-            "compression": "bzip2"
+            "compression": "bzip2",
+            "afterInstall": "./bin/linux/after-install.tpl"
+        },
+        "rpm": {
+            "afterInstall": "./bin/linux/after-install.tpl"
         },
         "snap": {
             "confinement": "classic",

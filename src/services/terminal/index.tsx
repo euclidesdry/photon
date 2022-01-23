@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import styles from './styles.module.scss';
 
 // xterm
-import { Terminal } from 'xterm';
+import { ITerminalOptions, Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
+import { WebglAddon } from 'xterm-addon-webgl';
 import 'xterm/css/xterm.css';
 
 // store
@@ -12,49 +13,49 @@ import { useConfig } from '../../hooks/useTheme';
 
 import { useCurrentTheme } from './api';
 
-const { ipcRenderer } = window.require('electron');
+const { ipcRenderer, shell } = window.require('electron');
 
 function PhotonTerminal() {
     const terminalShell = useConfig('shell');
+    const configTheme = useConfig('photonTheme');
 
     // -- Shell
     useEffect(() => {
         ipcRenderer.send('terminal.shell', terminalShell);
     }, [terminalShell]);
 
-    const configTheme = useConfig('photonTheme');
-    console.log(configTheme);
-    const [theme, setCurrentTheme] = useState(useCurrentTheme(configTheme));
-    const [term] = useState(new Terminal(theme));
-
-    // -- Theme
+    // xterm
+    const currentTheme = useCurrentTheme(configTheme);
+    const [term] = useState<Terminal>(new Terminal(currentTheme));
 
     useEffect(() => {
-        const currentTheme = useCurrentTheme(configTheme);
-        setCurrentTheme(currentTheme);
-
-        console.log(currentTheme);
-
+        if (!currentTheme) return;
         Object.keys(currentTheme).forEach((option) => {
             type OptionKey = keyof typeof currentTheme;
             term.setOption(option, currentTheme[option as OptionKey]);
         });
-    }, [configTheme]);
+    }, [currentTheme]);
 
     useEffect(() => {
-        // Addons
         const fitAddon = new FitAddon();
-        const weblinks = new WebLinksAddon();
+        const weblinks = new WebLinksAddon((e, uri) => {
+            e.preventDefault();
+
+            shell.openExternal(uri);
+        });
+        const webgl = new WebglAddon();
 
         term.loadAddon(fitAddon);
         term.loadAddon(weblinks);
-
-        // ---
 
         const terminalElement = document.getElementById('terminal');
 
         if (terminalElement) {
             term.open(terminalElement);
+            term.loadAddon(webgl);
+            webgl.onContextLoss(() => {
+                webgl.dispose();
+            });
             fitAddon.fit();
             ipcRenderer.send('terminal.resize', fitAddon.proposeDimensions());
 
@@ -75,8 +76,6 @@ function PhotonTerminal() {
             ipcRenderer.send('terminal.resize', fitAddon.proposeDimensions());
         }
     }, []);
-
-    // -- xterm
 
     useEffect(() => {
         const xterm = document.querySelector('.xterm-viewport');
